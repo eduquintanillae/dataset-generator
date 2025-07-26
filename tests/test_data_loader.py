@@ -1,5 +1,5 @@
 import pytest
-from dataset import DataLoader
+from modules.dataset import DataLoader
 
 
 @pytest.fixture
