@@ -4,6 +4,7 @@ import dotenv
 import os
 from openai import OpenAI
 import re
+import time
 
 
 dotenv.load_dotenv()
@@ -32,14 +33,15 @@ answer: {{answer}}
 
 class DataLabeler:
     def __init__(
-        self, model_name, chunks, n_questions_per_chunk, system_prompt, user_prompt
+        self, model_name, chunks, n_questions_per_chunk, progress_callback=None
     ):
         self.model_name = model_name
         self.model = None
         self.chunks = chunks
-        self.system_prompt = system_prompt
-        self.user_prompt = user_prompt
+        self.system_prompt = SYSTEM_PROMPT
+        self.user_prompt = USER_PROMPT
         self.n_questions_per_chunk = n_questions_per_chunk
+        self.progress_callback = progress_callback
 
         self.load_model()
 
@@ -55,10 +57,15 @@ class DataLabeler:
 
     def label_dataset(self):
         labeled_data = []
-        for chunk in self.chunks:
+        total_input_tokens = 0
+        total_output_tokens = 0
+        total = len(self.chunks)
+        initial_time = time.time()
+        for idx, chunk in enumerate(self.chunks):
+            start_time = time.time()
             user_prompt = self.format_user_prompt(chunk)
-            response = self.model_completion(self.system_prompt, user_prompt)
-            final_response = self.postprocess_response(response)
+            model_response = self.model_completion(self.system_prompt, user_prompt)
+            final_response = self.postprocess_response(model_response["response"])
             for response in final_response:
                 labeled_data.append(
                     {
@@ -67,7 +74,26 @@ class DataLabeler:
                         "answer": response["answer"],
                     }
                 )
-        return labeled_data
+            final_time = time.time() - start_time
+            total_input_tokens += model_response["prompt_tokens"]
+            total_output_tokens += model_response["completion_tokens"]
+            if self.progress_callback:
+                self.progress_callback(
+                    step=idx,
+                    total_steps=total,
+                    time=final_time,
+                    n_input_tokens=model_response["prompt_tokens"],
+                    n_output_tokens=model_response["completion_tokens"],
+                    total_tokens=model_response["total_tokens"],
+                )
+        total_time = time.time() - initial_time
+        results = {
+            "labeled_data": labeled_data,
+            "total_input_tokens": total_input_tokens,
+            "total_output_tokens": total_output_tokens,
+            "total_time": total_time,
+        }
+        return results
 
     def model_completion(self, system_prompt, user_prompt):
         messages = [
@@ -78,7 +104,13 @@ class DataLabeler:
         response = self.model.chat.completions.create(
             model=self.model_name, messages=messages
         )
-        return response.choices[0].message.content
+        completion_response = {
+            "response": response.choices[0].message.content,
+            "prompt_tokens": response.usage.prompt_tokens,
+            "completion_tokens": response.usage.completion_tokens,
+            "total_tokens": response.usage.total_tokens,
+        }
+        return completion_response
 
     def postprocess_response(self, response):
         pattern = r"\*\*\d+\*\*\s*question:\s*(.*?)\s*answer:\s*(.*?)(?=\n\*\*|\Z)"
@@ -95,24 +127,22 @@ if __name__ == "__main__":
     data_loader = DataLoader(
         file_paths=[
             "../assets/attention_is_all_you_need.pdf",
+            "../assets/attention_is_all_you_need.txt",
+            "../assets/attention_is_all_you_need.docx",
         ]
     )
     data = data_loader.load_data()
-    txt_content = data[0]["content"]
+    data = data_loader.flatten_content(data)
 
-    char_chunks = DataChunker(
-        txt_content, method="character", chunk_size=500
-    ).chunk_text()
+    char_chunks = DataChunker(data, method="character", chunk_size=500).chunk_text()
     char_chunks = char_chunks[:2]  # Testing
 
     labeler = DataLabeler(
         model_name="gpt-4o-mini",
         chunks=char_chunks,
-        system_prompt=SYSTEM_PROMPT,
-        user_prompt=USER_PROMPT,
         n_questions_per_chunk=2,
     )
     labeled_data = labeler.label_dataset()
 
-    print(f"Labeled data: {labeled_data}")
-    print(f"Number of samples: {len(labeled_data)}")
+    print(f"Labeled data: {labeled_data['labeled_data']}")
+    print(f"Number of samples: {len(labeled_data['labeled_data'])}")

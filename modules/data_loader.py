@@ -68,14 +68,20 @@ class DataLoader:
                 not_supported_files.append(file_path)
         return data
 
+    def flatten_content(self, data):
+        data = "\n".join([item["content"] for item in data if "content" in item])
+        return data.strip()
+
 
 if __name__ == "__main__":
     data_loader = DataLoader(
         file_paths=[
-            "assets/attention_is_all_you_need.pdf",
-            "assets/attention_is_all_you_need.docx",
-            "assets/attention_is_all_you_need.txt",
+            "../assets/attention_is_all_you_need.pdf",
+            "../assets/attention_is_all_you_need.docx",
+            "../assets/attention_is_all_you_need.txt",
         ]
     )
     data = data_loader.load_data()
-    len(data)
+    print(f"Number of files {len(data)}")
+    data = data_loader.flatten_content(data)
+    print(data)

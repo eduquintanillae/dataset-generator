@@ -106,33 +106,29 @@ if __name__ == "__main__":
     data_loader = DataLoader(
         file_paths=[
             "../assets/attention_is_all_you_need.pdf",
+            "../assets/attention_is_all_you_need.txt",
+            "../assets/attention_is_all_you_need.docx",
         ]
     )
     data = data_loader.load_data()
-    txt_content = data[0]["content"]
-    char_chunks = DataChunker(
-        txt_content, method="character", chunk_size=500
-    ).chunk_text()
+    data = data_loader.flatten_content(data)
+    char_chunks = DataChunker(data, method="character", chunk_size=500).chunk_text()
     print(f"Number of character chunks: {len(char_chunks)}")
-    word_chunks = DataChunker(
-        txt_content, method="word", words_per_chunk=100
-    ).chunk_text()
+    word_chunks = DataChunker(data, method="word", words_per_chunk=100).chunk_text()
     print(f"Number of word chunks: {len(word_chunks)}")
     sentence_chunks = DataChunker(
-        txt_content, method="sentence", sentences_per_chunk=3
+        data, method="sentence", sentences_per_chunk=3
     ).chunk_text()
     print(f"Number of sentence chunks: {len(sentence_chunks)}")
-    paragraph_chunks = DataChunker(txt_content, method="paragraph").chunk_text()
+    paragraph_chunks = DataChunker(data, method="paragraph").chunk_text()
     print(f"Number of paragraph chunks: {len(paragraph_chunks)}")
     delimiter_chunks = DataChunker(
-        txt_content, method="delimiter", delimiter="\n"
+        data, method="delimiter", delimiter="\n"
     ).chunk_text()
     print(f"Number of delimiter chunks: {len(delimiter_chunks)}")
-    token_chunks = DataChunker(
-        txt_content, method="token", tokens_per_chunk=512
-    ).chunk_text()
+    token_chunks = DataChunker(data, method="token", tokens_per_chunk=512).chunk_text()
     print(f"Number of token chunks: {len(token_chunks)}")
     semantic_chunks = DataChunker(
-        txt_content, method="semantic", semantic_clusters=10
+        data, method="semantic", semantic_clusters=10
     ).chunk_text()
     print(f"Number of semantic chunks: {len(semantic_chunks)}")
