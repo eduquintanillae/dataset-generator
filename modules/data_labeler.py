@@ -1,5 +1,5 @@
-from data_loader import DataLoader
-from data_chunker import DataChunker
+from modules.data_loader import DataLoader
+from modules.data_chunker import DataChunker
 import dotenv
 import os
 from openai import OpenAI

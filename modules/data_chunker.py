@@ -1,4 +1,4 @@
-from data_loader import DataLoader
+from modules.data_loader import DataLoader
 
 from sentence_transformers import SentenceTransformer
 from sklearn.cluster import KMeans
